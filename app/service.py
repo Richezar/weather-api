@@ -1,42 +1,36 @@
-import requests
+import httpx
 from datetime import datetime
-from fastapi import HTTPException
 from .config import settings
 from typing import Dict, Any
 from .exceptions import WeatherServiceError
 
 
-def get_weekly_forecast(city: str):
+async def get_weekly_forecast(city: str):
     """
     Получает прогноз погоды на 5 дней для указанного города
     """
     base_url = "https://api.openweathermap.org/data/2.5/forecast"
-    cleaned_city = city.strip()
-    if not cleaned_city:
-        raise HTTPException(
-            status_code=400,
-            detail="Название города должно содержать хотя бы один символ"
-        )
     try:
-        params = {
-            'q': cleaned_city,
-            'appid': settings.OPENWEATHER_API_KEY,
-            'units': 'metric',
-            'lang': 'ru',
-            'cnt': 40
-        }
+        async with httpx.AsyncClient() as client:
+            params = {
+                'q': city.strip(),
+                'appid': settings.OPENWEATHER_API_KEY,
+                'units': 'metric',
+                'lang': 'ru',
+                'cnt': 40
+            }
+            response = await client.get(base_url, params=params, timeout=10.0)
+            response.raise_for_status()
+            data = response.json()
+            daily_data = process_weather_data(data)
+            return generate_weekly_forecast(daily_data, data['city']['name'])
 
-        response = requests.get(base_url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        daily_data = process_weather_data(data)
-        forecast = generate_weekly_forecast(daily_data, data['city']['name'])
-
-        return forecast
-
-    except requests.exceptions.RequestException as e:
-        print(f"Ошибка при запросе погоды: {str(e)}")
-        raise WeatherServiceError(f"Не удалось получить данные о погоде: {str(e)}") from e
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise WeatherServiceError("Город не найден")
+        raise WeatherServiceError(f"Ошибка API погоды: {str(e)}")
+    except Exception as e:
+        raise WeatherServiceError(f"Внутренняя ошибка: {str(e)}")
 
 
 def process_weather_data(data: Dict[str, Any]):

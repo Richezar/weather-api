@@ -12,7 +12,7 @@ app = FastAPI(
 async def get_weather(city: str):
     """Получить прогноз погоды на 5 дней"""
     try:
-        return get_weekly_forecast(city)
+        return await get_weekly_forecast(city)
     except WeatherServiceError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
