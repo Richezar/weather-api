@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime
+from fastapi import HTTPException
 from .config import settings
 from typing import Dict, Any
 from .exceptions import WeatherServiceError
@@ -10,10 +11,15 @@ def get_weekly_forecast(city: str):
     Получает прогноз погоды на 5 дней для указанного города
     """
     base_url = "https://api.openweathermap.org/data/2.5/forecast"
-
+    cleaned_city = city.strip()
+    if not cleaned_city:
+        raise HTTPException(
+            status_code=400,
+            detail="Название города должно содержать хотя бы один символ"
+        )
     try:
         params = {
-            'q': city.strip(),
+            'q': cleaned_city,
             'appid': settings.OPENWEATHER_API_KEY,
             'units': 'metric',
             'lang': 'ru',
