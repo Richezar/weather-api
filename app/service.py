@@ -3,6 +3,7 @@ from datetime import datetime
 from .config import settings
 from typing import Dict, Any
 from .exceptions import WeatherServiceError
+from .schema import WeatherResponse, WeatherDay
 
 
 async def get_weekly_forecast(city: str):
@@ -61,13 +62,11 @@ def process_weather_data(data: Dict[str, Any]):
 
 
 def generate_weekly_forecast(daily_data: Dict[str, Dict[str, list]], city: str):
-    """Генерирует прогноз на неделю из обработанных данных"""
     forecast = []
     for date, values in sorted(daily_data.items())[:6]:
         if not values['temps']:
             continue
 
-        # поиск дождя в течение суток
         rain_keywords = ['дождь', 'ливень', 'грозa', 'морось']
         description = max(set(values['descriptions']), key=values['descriptions'].count)
         for desc in values['descriptions']:
@@ -75,17 +74,14 @@ def generate_weekly_forecast(daily_data: Dict[str, Dict[str, list]], city: str):
                 description = desc
                 break
 
-        forecast.append({
-            'date': date,
-            'temp_day': max(values['temps']),
-            'temp_night': min(values['temps']),
-            'humidity': round(sum(values['humidity']) / len(values['humidity'])),
-            'pressure': round(sum(values['pressure']) / len(values['pressure'])),
-            'wind_speed': round(sum(values['wind_speed']) / len(values['wind_speed']), 1),
-            'description': description
-        })
+        forecast.append(WeatherDay(
+            date=date,
+            temp_day=max(values['temps']),
+            temp_night=min(values['temps']),
+            humidity=round(sum(values['humidity']) / len(values['humidity'])),
+            pressure=round(sum(values['pressure']) / len(values['pressure'])),
+            wind_speed=round(sum(values['wind_speed']) / len(values['wind_speed']), 1),
+            description=description
+        ))
 
-    return {
-        'city': city,
-        'forecast': forecast
-    }
+    return WeatherResponse(city=city, forecast=forecast)
