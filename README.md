@@ -33,7 +33,3 @@ OPENWEATHER_API_KEY=ваш_ключ_от_openweather
 ```
 docker-compose up --build
 ```
-API будет доступно по адресу:
-```
-http://localhost:8080/weather/{название_города}
-```
